@@ -38,7 +38,7 @@ CORS(app)
 SERIAL_PORT = '/dev/tty.usbmodem1301'
 BAUD_RATE = 9600
 
-FRONTEND_RPI_IP = "http://192.168.0.153:5555"
+FRONTEND_RPI_IP = "http://172.20.10.9:8080"
 
 SER = False
 
@@ -223,10 +223,10 @@ def read_serial():
                         print(mode)
 
                         start = datetime.datetime.now()
-                        payload = {
-                            "mode": message 
+                        file = {
+                            "mode": mode 
                         }
-                        response = requests.post(FRONTEND_RPI_IP + "/api/set_mode", files=payload) # request for result
+                        response = requests.post(FRONTEND_RPI_IP + "/set_mode", files=file) # request for result
                         end = datetime.datetime.now()
                         print("Response time: {} ms".format(int((end-start).microseconds/1000)))
 

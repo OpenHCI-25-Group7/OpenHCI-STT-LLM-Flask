@@ -8,6 +8,7 @@
 #define ECHO_PIN 8
 #define DIST_THRESHOLD 40
 #define DIST_TOUCH_THRESHOLD 5
+#define DIST_DEBUG 0
 
 int state = 0;  // 0: Far, 1: Near, 2: Touch
 int dist = 0;
@@ -36,7 +37,12 @@ void setup() {
   pinMode(TRIG_PIN, OUTPUT);      //Arduino 對外啟動距離感測器Trig腳，射出超音波 
   pinMode(ECHO_PIN, INPUT);       //超音波被障礙物反射後，Arduino讀取感測器Echo腳的時間差
   // setDefault();
-  setSunny();
+  // setCloudy();
+  // setSunny();
+  // setLightRain();
+  set_led(255,255,0,0.6);
+  set_led(255,0,0,0.6);
+  // setThunderstorm();
 }
 
 void loop() {
@@ -48,21 +54,22 @@ void loop() {
     checkUltrasonic();
   }
 
+  currentMillis = millis();
   // If the current time exceeds recoverTime, reset state to 0 (far)
   if (state == 1 && currentMillis - endTime >= recoverTime) {
-    // Serial.println(currentMillis); // far
-    // Serial.println(endTime); // far
+    Serial.println(currentMillis); // far
+    Serial.println(endTime); // far
+    Serial.println(currentMillis - endTime); // far
+
     state = 0;  // Reset state to far after the timeout
     Serial.println("MODE:0"); // far
-    setDefault();
   }
   if (state == 2 && currentMillis - endTime >= recoverTime) {
-    // Serial.println(currentMillis); // far
+    Serial.println(currentMillis); // far
     // Serial.println(endTime); // far
     state = 1;  // Reset state to far after the timeout
     Serial.println("MODE:1"); // far
     endTime = millis();
-    setDefault();
   }
 
   if (Serial.available()) {
@@ -109,9 +116,11 @@ void checkUltrasonic() {
 
   int dist = (pulseIn(ECHO_PIN, HIGH) / 2) / 29.1;  
 
-  // Serial.print("Distance: ");
-  // Serial.print(dist);
-  // Serial.println(" cm");
+  if(DIST_DEBUG){
+    Serial.print("Distance: ");
+    Serial.print(dist);
+    Serial.println(" cm");
+  }
 
   // Check if the person is within the near or touch range
   if (dist < DIST_THRESHOLD) {
