@@ -28,34 +28,5 @@ XX職業都 ⋯
   "emotion_label": "...",
   "duration": ...,
   "bias_count": ...
-}
-
-{
-  "title": "EmotionAnalysisResult",
-  "description": "AI 模型根據語音轉文字輸出之情緒與偏見分析結果",
-  "type": "object",
-  "properties": {
-    "emotion_label": {
-      "type": "string",
-      "enum": ["大笑", "安靜", "偏見", "碎碎念", "吵架", "大吵"],
-      "description": "AI 根據語句內容判斷出的主要情緒標籤"
-    },
-    "duration": {
-      "type": "number",
-      "minimum": 0,
-      "description": "AI 判斷的不愉快情緒總持續時間（秒）"
-    },
-    "bias_count": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "AI 判斷出含偏見語句的次數"
-    },
-    "weather": {
-      "type": "string",
-      "enum": ["晴天", "陰天（☁️）", "小雨（🌦）", "雷陣雨（⛈）"],
-      "description": "根據分析規則映射出的天氣隱喻"
-    }
-  },
-  "required": ["emotion_label", "duration", "bias_count", "weather"],
-  "additionalProperties": false
+  ""weather": ...
 }

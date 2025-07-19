@@ -13,6 +13,22 @@ from threading import Thread
 from flask_cors import CORS
 import re
 import requests
+from pydantic import BaseModel
+from typing import Literal
+
+class EmotionAnalysisResult(BaseModel):
+    emotion_label: str
+    duration: float
+    bias_count: int
+    weather: str
+
+    def to_dict(self):
+        return {
+            "emotion_label": self.emotion_label,
+            "duration": self.duration,
+            "bias_count": self.bias_count,
+            "weather": self.weather
+        }
 
 
 
@@ -42,6 +58,12 @@ class SpeechRecognizer:
 
         self.rec = sr.Recognizer()
         self.mic = sr.Microphone(device_index=1)
+        
+        microphones = sr.Microphone.list_microphone_names()
+        print("Available:")
+        for i, mic_name in enumerate(microphones):
+            print(f"{i}: {mic_name}")
+
         self.lock = threading.Lock()
 
         self.pool = futures.ThreadPoolExecutor(thread_name_prefix="Rec Thread")
@@ -157,43 +179,24 @@ def display_content():
     sys_prompt = ""
     with open("sys_prompt.txt", "r", encoding="utf-8") as file:
         sys_prompt = file.read()
-        print(sys_prompt)
+        # print(sys_prompt)
 
     try:
         # Make the API call to GPT-4 to generate a response
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
+        response = client.responses.parse(
+            model="gpt-4o-2024-08-06",
+            input=[
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            text_format=EmotionAnalysisResult
         )
+
+        parsed_result = response.output_parsed
+        print(response)
+        print(parsed_result)
+        return jsonify(response.to_dict()['output'][0]['content'][0]['parsed'])
         
-        result = response.choices[0].message.content.strip()
-
-        # Debug: Print GPT response content
-        print("GPT Response Content: ", result)
-
-        # Try extracting the JSON part from the GPT response using regex
-        match = re.search(r'\{.*\}', result)
-        if match:
-            json_str = match.group(0)  # Extract the JSON part
-            print("Extracted JSON String: ", json_str)
-
-            # Attempt to parse the extracted JSON string
-            try:
-                parsed = json.loads(json_str)
-                if all(k in parsed for k in ("emotion_label", "duration", "bias_count", "weather")):
-                    # If successful, return the parsed JSON
-                    return jsonify({"result": parsed})
-            except json.JSONDecodeError as e:
-                # Handle JSON parsing errors
-                print(f"JSON Decode Error: {e}")
-                return jsonify({"error": "Invalid JSON format in GPT response"}), 500
-        else:
-            # If no valid JSON is found, return an error
-            return jsonify({"error": "Failed to extract valid JSON from the response"}), 500
-
     except RateLimitError:
         # Handle OpenAI API rate limit errors
         return jsonify({"error": "OpenAI API quota exceeded"}), 429
@@ -254,21 +257,14 @@ def start_serial_read():
 
 
 
-
-
-
-
-
-
-
 # 原 前端設定
 
 # 👉 解決 CORS
 CORS(app, origins="*", methods=["GET", "POST", "OPTIONS"], 
      allow_headers=["Content-Type"])
 
-@app.route("/display_content", methods=["POST"])
-def display_content():
+@app.route("/display_content_sentence", methods=["POST"])
+def display_content_sentence():
     print("收到前端請求：", request.json)
     
     return jsonify({
