@@ -37,7 +37,7 @@ def mirror_interaction(
         print("⚠️ 條件不符，無操作")
 
 
-# 以下為功能函式實作（可根據實際 UI 或硬體對應替換）
+# 切換頁面
 def play_weather_video(weather_type):
     print(f"播放 {weather_type} 影片＋字幕")
 
