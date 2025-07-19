@@ -35,7 +35,8 @@ void setup() {
   Serial.begin(9600);           //設定序列埠監控視窗 (Serial Monitor) 和 Arduino資料傳輸速率為 9600 bps (Bits Per Second)
   pinMode(TRIG_PIN, OUTPUT);      //Arduino 對外啟動距離感測器Trig腳，射出超音波 
   pinMode(ECHO_PIN, INPUT);       //超音波被障礙物反射後，Arduino讀取感測器Echo腳的時間差
-  setDefault();
+  // setDefault();
+  setSunny();
 }
 
 void loop() {
@@ -68,8 +69,9 @@ void loop() {
     String input = Serial.readStringUntil('\n');  // Read the input until a newline character
 
     // Check if the input starts with "WS2812:"
-    if (input.startsWith("WS2812:")) {
-      String weather = input.substring(7);  // Extract the weather code after "WS2812:"
+    // if (input.startsWith("WS2812:")) {
+    {
+      String weather = input.substring(0);  // Extract the weather code after "WS2812:"
 
       // Convert the mode to an integer
       int weatherCode = weather.toInt();

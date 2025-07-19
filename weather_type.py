@@ -61,3 +61,74 @@ example_input = {
 # 呼叫對應函數
 weather_result = map_to_weather(**example_input)
 print(f"對應天氣隱喻：{weather_result}")
+
+import openai
+import logging
+import time
+
+# 設定 logging 以便調試
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger()
+
+def test_do_with_sdk():
+    # 模擬 OpenAI 客戶端（這裡使用的是 OpenAI SDK 的方法，已經包含在 `openai` 模塊中）
+    openai.api_key = "你的 API 金鑰"  # 替換為你自己的金鑰
+
+    # 這是模擬的輸入和指令
+    inputs = "請解釋量子計算的基本概念"
+    instructions = "作為一個知識助手，解釋量子計算。"
+    
+    tools = [
+        {"name": "tool1", "description": "A sample tool for demonstration purposes."}
+    ]
+    model_name = "gpt-4"  # 或者使用其他模型名稱，如 "assistant"
+
+    # 取得上傳的文件
+    uploaded_files = openai.files.list()
+    uploaded_files_data = uploaded_files['data']
+    uploaded_fileids = [file['id'] for file in uploaded_files_data]
+    logger.debug("Uploaded file IDs: ", uploaded_fileids)
+
+    # 創建知識助手
+    assis = openai.beta.assistants.create(
+        name="Knowledge Assistant",
+        instructions=instructions,
+        model=model_name,
+        tools=tools,
+        file_ids=uploaded_fileids,
+    )
+
+    # 創建一個討論串
+    thread = openai.beta.threads.create()
+
+    # 發送訊息到討論串
+    openai.beta.threads.messages.create(
+        thread_id=thread['id'],
+        role="user",
+        content=inputs,
+    )
+
+    # 創建執行任務
+    run = openai.beta.threads.runs.create(
+        thread_id=thread['id'], assistant_id=assis['id']
+    )
+
+    # 等待任務完成
+    while True:
+        retrieved_run = openai.beta.threads.runs.retrieve(
+            thread_id=thread['id'], run_id=run['id']
+        )
+        logger.debug("Retrieved run: ", retrieved_run)
+        if retrieved_run['status'] == "completed":
+            break
+        time.sleep(1)  # 等待 1 秒後再檢查狀態
+
+    # 獲取討論內容
+    thread_messages = openai.beta.threads.messages.list(thread['id'])
+    logger.debug("Thread messages: ", thread_messages['data'])
+
+    # 返回最初的回應內容
+    return thread_messages['data'][0]['content'][0]['text']['value']
+
+result = test_do_with_sdk()
+print("Test result:", result)

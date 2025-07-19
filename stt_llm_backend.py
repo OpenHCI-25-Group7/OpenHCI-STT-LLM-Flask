@@ -7,6 +7,30 @@ import speech_recognition as sr
 from concurrent import futures
 from openai import OpenAI, RateLimitError
 import json
+import serial
+import threading
+from threading import Thread
+from flask_cors import CORS
+import re
+import requests
+
+
+
+app = Flask(__name__)
+CORS(app)
+
+SERIAL_PORT = '/dev/tty.usbmodem1301'
+BAUD_RATE = 9600
+
+FRONTEND_RPI_IP = "http://192.168.0.153:5555"
+
+SER = False
+
+if SER:
+    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+    time.sleep(2)
+
+serial_message = ""
 
 app = Flask(__name__)
 
@@ -129,69 +153,22 @@ def display_content():
                     summary += f"[{time_info}] {content}\n"
 
     # Construct the prompt to send to GPT
-    prompt = (
-        "請你根據以下時間順序排列的家庭對話紀錄：\n" + summary +
-        "\n請進行情緒與溝通分析，並觀察是否有好轉或惡化的趨勢。"
-        "如果今天的對話比前幾天更融洽，請給予鼓勵性的今日運勢與天氣；"
-        "如果今天比前幾天更緊張，請給予建設性的建議與觀察；"
-        "若趨勢不明顯，請採用中立但正向的一般性鼓勵用語。"
-        "接著請依據下列規則輸出：\n"
-        "1. 依據整體情緒選出最相似的天氣（晴天、毛毛雨、暴風雪、雷陣雨、颳風）\n"
-        "2. 依據話題寫出一句具新聞感的『每日頭條』\n"
-        "3. 依據對話趨勢與狀態，寫出一句具鼓勵或建議性的『今日運勢』\n"
-        "接著請「嚴格依據」下列規則輸出結果，格式為 JSON，不能做額外解釋或背景說明：\n"
-        '{"weather": ..., "headline": ..., "fortune": ...}'
-
-        "以下是如何進行分析的範例：\n"
-        "範例 1:\n"
-        "對話紀錄：\n"
-        "[2025-07-10 10:00] 今天早上我們討論了一些問題，我覺得我們的溝通進展得不錯。\n"
-        "[2025-07-10 10:30] 是的，雖然有點小爭執，但最終我們都能理解對方的觀點。\n"
-        "分析：很理性溝通、無激烈情緒字眼，判斷為晴天、富有希望的新聞、漸入佳境的運勢\n"
-        "GPT response: "
-        '{"weather": 晴天, "headline": 美國高關稅將上路 台、日、歐、印等仍可達成協議。, "fortune": 今天的溝通會較為融洽，建議保持開放的態度，繼續良好的合作。}'
-
-        "範例 2:\n"
-        "對話紀錄：\n"
-        "[2025-07-09 14:00] 我我我。\n"
-        "[2025-07-09 14:05] 我沒有不聽。\n"
-        "[2025-07-09 14:10] 哈囉哈囉。\n"
-        "[2025-07-09 14:05] XXXYYYmejfnjfn。\n"
-        "分析：若收音不穩、對話內容、情緒不明顯，請採用中立的陰天、一般的氣象新聞、中立但正向的一般性鼓勵用語。\n"
-        "GPT response: "
-        '{"weather": 陰天, "headline": 今天氣不穩「6縣市大雨特報」周五起留意熱帶系統動向。, "fortune": 今天的溝通會較為融洽，建議保持開放的態度，繼續良好的合作。}'
-
-        "範例 3:\n"
-        "對話紀錄：\n"
-        "[2025-07-10 14:00] 不要讀設計系，我有點擔心你未來的工作機會。\n"
-        "[2025-07-10 14:05] 我明白你的擔心，但我覺得設計系是個充滿創意的領域，應該很有發展空間。\n"
-        "[2025-07-10 14:10] 為什麼。\n"
-        "[2025-07-10 14:05] 我不明白。\n"
-        "分析：理性但相互不太理解，採用中立的颳風天、促進該話題理解的新聞、正向的鼓勵溝通用語。\n"
-        "GPT response: "
-        '{"weather": "颳風", "headline": "新一代設計展開幕，未來設計領域將成為最具創意的職業之一", "fortune": "今日的溝通會有一些矛盾，建議冷靜處理並聽取彼此觀點，能有所進展。"}\n'
-
-        "範例 4:\n"
-        "對話紀錄：\n"
-        "[2025-07-10 16:00] 你為什麼都不交男朋友\n"
-        "[2025-07-10 16:05] 我只是有不同的看法\n"
-        "[2025-07-10 16:10] 請不要這麼激動\n"
-        "[2025-07-10 16:50] 好吧\n"
-        "[2025-07-10 16:50] 都這樣啊\n"
-        "分析：這段對話顯示出強烈的情緒波動，有爭吵的情況，情緒較為負面，伴侶議題相關。採用激烈的雷陣雨、促進該話題理解的新聞、建議冷靜嘗試理解的用語\n"
-        "分析：理性但相互不太理解，採用中立的颳風天、促進該話題理解的新聞、正向的鼓勵溝通用語。\n"
-        "GPT response: "
-        '{"weather": "雷陣雨", "headline": "台灣生育率全球最低，如何解鎖年輕世代「不婚不生」背後的深層心結？", "fortune": "今天容易有情緒化反應，建議嘗試理解對方立場，說不定有新的發現。"}\n'
-    )
+    prompt = summary
+    sys_prompt = ""
+    with open("sys_prompt.txt", "r", encoding="utf-8") as file:
+        sys_prompt = file.read()
+        print(sys_prompt)
 
     try:
         # Make the API call to GPT-4 to generate a response
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
+                {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": prompt}
             ]
         )
+        
         result = response.choices[0].message.content.strip()
 
         # Debug: Print GPT response content
@@ -206,7 +183,7 @@ def display_content():
             # Attempt to parse the extracted JSON string
             try:
                 parsed = json.loads(json_str)
-                if all(k in parsed for k in ("weather", "headline", "fortune")):
+                if all(k in parsed for k in ("emotion_label", "duration", "bias_count", "weather")):
                     # If successful, return the parsed JSON
                     return jsonify({"result": parsed})
             except json.JSONDecodeError as e:
@@ -225,7 +202,59 @@ def display_content():
         print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
+def read_serial():
+    """
+    TODO: Pass signals from arduino to the frontend
+    """
+    global serial_message
+    while True:
+        try:
+            if ser.in_waiting > 0:
+                message = ser.readline().decode('utf-8').strip()
+                if message:
+                    serial_message = message
+                    print("Received message:", serial_message)
+
+                    if(message[0:5] == "MODE:"):
+                        mode = int(serial_message[5])
+                        print(mode)
+
+                        start = datetime.datetime.now()
+                        payload = {
+                            "mode": message 
+                        }
+                        response = requests.post(FRONTEND_RPI_IP + "/api/set_mode", files=payload) # request for result
+                        end = datetime.datetime.now()
+                        print("Response time: {} ms".format(int((end-start).microseconds/1000)))
+
+                        if response.status_code == 200:
+                            result = response.json()['result']
+                            return result
+                        else:
+                            return "NULL"
+
+        except serial.SerialException as e:
+            print(f"SerialException: {e}")
+            if str(e) == 'device reports readiness to read but returned no data (device disconnected or multiple access on port?)':
+                print("Attempting to reconnect...")
+                try:
+                    ser.close()  # 關閉串口
+                    time.sleep(2)  # 等待一段時間再重新開啟串口
+                    ser.open()  # 重新開啟串口
+                    print("Reconnected to the serial device.")
+                except Exception as ex:
+                    print(f"Failed to reconnect: {ex}")
+        time.sleep(0.1)
+
+
+def start_serial_read():
+    serial_thread = Thread(target=read_serial)
+    serial_thread.daemon = True
+    serial_thread.start()
 
 if __name__ == "__main__":
     print("Flask STT server running...")
+    # display_content()
+    # start_serial_read()
+
     app.run(host="0.0.0.0", port=5000, threaded=True)
