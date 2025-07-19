@@ -27,12 +27,7 @@ XX職業都 ⋯
 
 請考量以上句式。
 
-請輸出 JSON 格式如下：
-{
-  "emotion_label": "...",
-  "duration": ...,
-  "bias_count": ...
-}'''
+'''
 WeatherType = Literal["晴天", "陰天（☁️）", "小雨（🌦）", "雷陣雨（⛈）"]
 
 def map_to_weather(emotion_label: str, duration: float, bias_count: int) -> WeatherType:
