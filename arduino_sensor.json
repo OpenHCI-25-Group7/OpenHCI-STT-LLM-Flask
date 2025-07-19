@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "資料紀錄的時間（ISO 8601 格式）"
+    },
+    "distance": {
+      "type": "number",
+      "minimum": 0,
+      "description": "以公分為單位的測距資料"
+    },
+    "button_pressed": {
+      "type": "boolean",
+      "description": "按鈕是否被按下"
+    },
+    "device_id": {
+      "type": "string",
+      "description": "裝置唯一識別碼（可選）"
+    }
+  },
+  "required": ["timestamp", "distance", "button_pressed"]
+}
