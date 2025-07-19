@@ -226,6 +226,61 @@ def display_content():
         return jsonify({"error": str(e)}), 500
 
 
+
+
+
+
+
+
+
+
+
+# 原 前端設定
+
+# 👉 解決 CORS
+CORS(app, origins="*", methods=["GET", "POST", "OPTIONS"], 
+     allow_headers=["Content-Type"])
+
+@app.route("/display_content", methods=["POST"])
+def display_content():
+    print("收到前端請求：", request.json)
+    
+    return jsonify({
+        "result": {
+            "suggestion": "精選書摘《我不是不努力，只是做不到你滿意》：大人一句無心的話，如何把孩子推入困境？",
+            "fortune": "今天稱讚家人一句，氣氛 +1°C ☀️"
+        }
+    })
+
+@app.route("/family_weather", methods=["POST"])
+def family_weather():
+    print("收到家庭天氣請求：", request.json)
+    
+    return jsonify({
+        #接收llm response
+        "status": "小雨"  # 可改成：晴天、多雲、小雨、雷陣雨
+    })
+
+# 用於暫存切換頁面事件資料（這邊是切換頁面事件的參數記憶）
+event_logs = []
+@app.route('/log', methods=['POST'])
+def log_event():
+    try:
+        data = request.get_json()
+        log_entry = {
+            "timestamp": data.get("timestamp", datetime.utcnow().isoformat()),
+            "event": data.get("event"),
+            "weather": data.get("weather"),
+            "person_near": data.get("person_near")
+        }
+        event_logs.append(log_entry)
+        print(f"✅ 收到事件紀錄: {log_entry}")
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        print(f"❌ 錯誤: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 400
+    
+
 if __name__ == "__main__":
     print("Flask STT server running...")
     app.run(host="0.0.0.0", port=5000, threaded=True)
