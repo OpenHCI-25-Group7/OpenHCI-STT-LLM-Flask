@@ -42,10 +42,11 @@ function handleMirrorState() {
 }
 
 // 功能執行函式（可連接畫面或硬體控制）
+
 function playWeatherVideo(weather) {
   console.log(`🌤 播放 ${weather} 影片與字幕`);
 }
-
+// 裂痕頁面
 function playCrackAnimation() {
   console.log("💥 播放裂痕動畫");
 }
