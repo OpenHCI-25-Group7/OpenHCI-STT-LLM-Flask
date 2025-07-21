@@ -4,7 +4,7 @@
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB+NEO_KHZ800);
 
 unsigned long prevMillis = 0;
-const unsigned long interval = 30; // 更新間隔
+const unsigned long interval = 500; // 更新間隔
 
 unsigned long t0 = 0, t1 = 0, t2 = 0;
 bool breathDir = true;
@@ -18,6 +18,8 @@ bool flashState = false;
 void setup() {
   strip.begin();
   strip.show();
+  Serial.begin(9600); 
+  weatherSunny();
 }
 
 // 核心函式：變色 + 閃爍/明暗
@@ -28,17 +30,17 @@ void weather(int r, int g, int b, int brightness, int dimness) {
     lastChange = now;
     flashState = !flashState;
     uint8_t currentB = flashState ? brightness : dimness;
-    strip.setBrightness(currentB);
     for(int i=0; i<strip.numPixels(); i++){
       strip.setPixelColor(i, strip.Color(r, g, b));
     }
+    strip.setBrightness(currentB);
     strip.show();
   }
 }
 
 // 各種天氣包裝
 void weatherSunny() {
-  weather(255,244,214, 200, 150);
+  weather(242,236,111, 200, 100);
 }
 void weatherCloudy() {
   weather(180,180,200, 150, 100);

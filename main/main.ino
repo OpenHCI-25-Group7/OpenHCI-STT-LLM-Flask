@@ -6,7 +6,7 @@
 
 #define TRIG_PIN 7
 #define ECHO_PIN 8
-#define DIST_THRESHOLD 40
+#define DIST_THRESHOLD 45
 #define DIST_TOUCH_THRESHOLD 5
 #define DIST_DEBUG 0
 
@@ -24,7 +24,7 @@ unsigned long lastTimeUltrasonicCheck = 0;
 unsigned long buttonInterval = 10;
 unsigned long ultrasonicInterval = 50;
 
-unsigned long recoverTime = 5000;  // Timeout for state recovery (in milliseconds)
+unsigned long recoverTime = 3000;  // Timeout for state recovery (in milliseconds)
 unsigned long endTime = 0;  // When the state should reset (time at which the state changes)
 
 int stableCountThreshold = 3;  // Number of stable readings before changing the state
@@ -40,9 +40,10 @@ void setup() {
   // setCloudy();
   // setSunny();
   // setLightRain();
-  set_led(255,255,0,0.6);
-  set_led(255,0,0,0.6);
+  // set_led(255,255,0,200);
+  // set_led(255,0,0,0.6);
   // setThunderstorm();
+  setSunny();
 }
 
 void loop() {
@@ -57,15 +58,15 @@ void loop() {
   currentMillis = millis();
   // If the current time exceeds recoverTime, reset state to 0 (far)
   if (state == 1 && currentMillis - endTime >= recoverTime) {
-    Serial.println(currentMillis); // far
-    Serial.println(endTime); // far
-    Serial.println(currentMillis - endTime); // far
+    // Serial.println(currentMillis); // far
+    // Serial.println(endTime); // far
+    // Serial.println(currentMillis - endTime); // far
 
     state = 0;  // Reset state to far after the timeout
     Serial.println("MODE:0"); // far
   }
   if (state == 2 && currentMillis - endTime >= recoverTime) {
-    Serial.println(currentMillis); // far
+    // Serial.println(currentMillis); // far
     // Serial.println(endTime); // far
     state = 1;  // Reset state to far after the timeout
     Serial.println("MODE:1"); // far
@@ -76,9 +77,9 @@ void loop() {
     String input = Serial.readStringUntil('\n');  // Read the input until a newline character
 
     // Check if the input starts with "WS2812:"
-    // if (input.startsWith("WS2812:")) {
+    if (input.startsWith("WS2812:"))
     {
-      String weather = input.substring(0);  // Extract the weather code after "WS2812:"
+      String weather = input.substring(7);  // Extract the weather code after "WS2812:"
 
       // Convert the mode to an integer
       int weatherCode = weather.toInt();
@@ -116,11 +117,11 @@ void checkUltrasonic() {
 
   int dist = (pulseIn(ECHO_PIN, HIGH) / 2) / 29.1;  
 
-  if(DIST_DEBUG){
-    Serial.print("Distance: ");
-    Serial.print(dist);
-    Serial.println(" cm");
-  }
+  // if(DIST_DEBUG){
+  //   Serial.print("Distance: ");
+  //   Serial.print(dist);
+  //   Serial.println(" cm");
+  // }
 
   // Check if the person is within the near or touch range
   if (dist < DIST_THRESHOLD) {
@@ -167,18 +168,19 @@ void set_led(int r, int g, int b, int brightness) {
 
 void setSunny() {
   for (int i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, strip.Color(255, 204, 85));  // Sunny color
+    strip.setPixelColor(i, strip.Color(210,153,52));  // Sunny color
   }
+  strip.setBrightness(100);
   strip.show();
-  strip.setBrightness(0.8);
 }
 
 void setCloudy() {
   for (int i = 0; i < strip.numPixels(); i++) {
     strip.setPixelColor(i, strip.Color(180, 190, 200));  // Cloudy color
   }
+  strip.setBrightness(60);
   strip.show();
-  strip.setBrightness(0.6);
+  // strip.setBrightness(0.6);
 }
 
 void setLightRain() {
@@ -186,7 +188,7 @@ void setLightRain() {
     strip.setPixelColor(i, strip.Color(100, 160, 255));  // Light rain color
   }
   strip.show();
-  strip.setBrightness(0.6);
+  // strip.setBrightness(0.6);
 }
 
 void setThunderstorm() {

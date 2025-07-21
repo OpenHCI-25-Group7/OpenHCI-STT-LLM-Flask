@@ -35,12 +35,13 @@ class EmotionAnalysisResult(BaseModel):
 app = Flask(__name__)
 CORS(app)
 
-SERIAL_PORT = '/dev/tty.usbmodem1301'
+SERIAL_PORT = '/dev/tty.usbmodem11401'
 BAUD_RATE = 9600
 
-FRONTEND_RPI_IP = "http://172.20.10.9:8080"
+FRONTEND_RPI_IP = "http://172.20.10.12:8080"
 
-SER = False
+SER = True
+# SER = False
 
 if SER:
     ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
@@ -160,6 +161,52 @@ def clear_transcript():
 import re
 import json
 
+@app.route("/set_weather", methods=["POST"])
+def set_weather():
+    try:
+        data = request.get_json()
+        weather_id = data.get("weather_id")
+
+        if weather_id is None:
+            return jsonify({"error": "Missing 'weather_id' in request"}), 400
+
+        if SER:
+            ser.reset_input_buffer()
+            ser.write(f"WS2812:{weather_id}\n".encode('utf-8'))
+            print(f"✅ Sent weather_id to serial: WS2812:{weather_id}")
+            return jsonify({"status": "sent", "weather_id": weather_id}), 200
+        else:
+            print("⚠️ SER not enabled, simulated send:", weather_id)
+            return jsonify({"status": "SER disabled", "weather_id": weather_id}), 200
+
+    except Exception as e:
+        print(f"❌ Error in /set_weather: {e}")
+        return jsonify({"error": str(e)}), 500
+    
+
+@app.route("/set_mode", methods=["POST"])
+def set_mode():
+    try:
+        data = request.get_json()
+        mode_id = data.get("mode_id")
+
+        if mode_id is None:
+            return jsonify({"error": "Missing 'mode_id' in request"}), 400
+
+        start = datetime.datetime.now()
+        file = {
+            "mode_id": mode_id + 1
+        }
+        response = requests.post(FRONTEND_RPI_IP + "/set_mode", files=file) # request for result
+        end = datetime.datetime.now()
+        print("Response time: {} ms".format(int((end-start).microseconds/1000)))
+
+
+    except Exception as e:
+        print(f"❌ Error in /set_mode: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/display_content", methods=["POST"])
 def display_content():
     summary = ""
@@ -192,10 +239,39 @@ def display_content():
             text_format=EmotionAnalysisResult
         )
 
-        parsed_result = response.output_parsed
-        print(response)
-        print(parsed_result)
-        return jsonify(response.to_dict()['output'][0]['content'][0]['parsed'])
+        # parsed_result = response.output_parsed
+        # print(parsed_result)
+
+        output = response.to_dict()['output'][0]['content'][0]['parsed']
+        # WeatherType = Literal["晴天", "陰天（☁️）", "小雨（🌦）", "雷陣雨（⛈）"]
+        #                         0        1           2            3
+
+        def map_to_weather(emotion_label: str, duration: float, bias_count: int, weather: str) -> int:
+            """
+            根據情緒標籤、負面氛圍持續時間與偏見次數，回傳天氣隱喻。
+            """
+            if emotion_label == "大笑":
+                return 0
+            elif emotion_label == "安靜" and duration >= 30:
+                return 1
+            elif emotion_label in ["偏見", "碎碎念", "吵架"] and duration >= 60 and bias_count >= 2:
+                return 2
+            elif emotion_label == "大吵" and duration >= 90 and bias_count >= 3:
+                return 3
+            else:
+                return 0  # 預設為晴天
+        
+        weather_id = map_to_weather(**output)
+        # print(weather_id)
+        output["weather"] = str(weather_id)
+        # print(output)
+
+        if SER:
+            ser.reset_input_buffer()
+            # time.sleep(5)
+            ser.write(f"WS2812:{weather_id}".encode('utf-8'))
+
+        return jsonify(output)
         
     except RateLimitError:
         # Handle OpenAI API rate limit errors
@@ -306,6 +382,6 @@ def log_event():
 if __name__ == "__main__":
     print("Flask STT server running...")
     # display_content()
-    # start_serial_read()
+    start_serial_read()
 
     app.run(host="0.0.0.0", port=5000, threaded=True)
